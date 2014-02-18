@@ -32,6 +32,34 @@ import com.typesafe.config.Config
  */
 object TorqueExecution extends App {
 
+  deployToTorque(args)
+
+  def deployToTorque(arguments: Array[String]) {
+    val defaultConfigPath = "./deployment.config"
+    val defaultConfig = readConfig(defaultConfigPath)
+    val mainConfig = if (arguments.size > 0) {
+      readConfig(arguments(0))
+    } else {
+      None
+    }
+    val config = (mainConfig, defaultConfig) match {
+      case (Some(main), Some(default)) =>
+        println(s"Using the configuration ${arguments(0)}, which was passed as an argument."
+          + "Using $defaultConfigPath as a fallback for unspecified parameters.")
+        main.withFallback(default)
+      case (Some(main), None) =>
+        println(s"Using the configration ${arguments(0)}, which was passed as an argument.")
+        main
+      case (None, Some(default)) =>
+        println(s"Using the default configuration from '$defaultConfigPath'.")
+        default
+      case (None, None) =>
+        throw new Exception(s"Either the path to a configuration file has to be passed as an argument, " +
+          "or the default configuration file @ '$defaultConfigPath' has to exist.")
+    }
+    TorqueDeployer.deploy(config)
+  }
+
   def readConfig(path: String): Option[Config] = {
     val configFile = new File(path)
     if (configFile.exists) {
@@ -41,27 +69,4 @@ object TorqueExecution extends App {
     }
   }
 
-  val defaultConfigPath = "./deployment.config"
-  val defaultConfig = readConfig(defaultConfigPath)
-  val mainConfig = if (args.size > 0) {
-    readConfig(args(0))
-  } else {
-    None
-  }
-  val config = (mainConfig, defaultConfig) match {
-    case (Some(main), Some(default)) =>
-      println(s"Using the configuration ${args(0)}, which was passed as an argument."
-        + "Using $defaultConfigPath as a fallback for unspecified parameters.")
-      main.withFallback(default)
-    case (Some(main), None) =>
-      println(s"Using the configration ${args(0)}, which was passed as an argument.")
-      main
-    case (None, Some(default)) =>
-      println(s"Using the default configuration from '$defaultConfigPath'.")
-      default
-    case (None, None) =>
-      throw new Exception(s"Either the path to a configuration file has to be passed as an argument, " +
-        "or the default configuration file @ '$defaultConfigPath' has to exist.")
-  }
-  TorqueDeployer.deploy(config)
 }
