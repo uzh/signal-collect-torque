@@ -26,4 +26,6 @@ excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
 
 /** Dependencies */
 libraryDependencies ++= Seq(
+  "ch.ethz.ganymed" % "ganymed-ssh2" % "build210"  % "compile",
+  "commons-codec" % "commons-codec" % "1.7"  % "compile"
   )
