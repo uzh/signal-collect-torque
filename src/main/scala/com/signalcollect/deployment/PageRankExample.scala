@@ -26,6 +26,7 @@ import akka.actor.ActorRef
 
 class PageRankExample extends TorqueDeployableAlgorithm {
   def execute(parameters: Map[String, String], nodeActors: Array[ActorRef]) {
+    println(s"Received parameters $parameters")
     val graph = GraphBuilder.withPreallocatedNodes(nodeActors).build
     graph.addVertex(new PageRankVertex(1))
     graph.addVertex(new PageRankVertex(2))
