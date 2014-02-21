@@ -31,6 +31,11 @@ object TorqueDeployer extends App {
   def deploy(config: Config) {
     val serverAddress = config.getString("deployment.torque.server.address")
     val serverUsername = config.getString("deployment.torque.server.username")
+    val jobRepetitions = if (config.hasPath("deployment.setup.copy-files")) {
+      config.getInt("deployment.torque.job.repetitions")
+    } else {
+      1
+    }
     val jobNumberOfNodes = config.getInt("deployment.torque.job.number-of-nodes")
     val jobCoresPerNode = config.getInt("deployment.torque.job.cores-per-node")
     val jobMemory = config.getString("deployment.torque.job.memory")
@@ -48,6 +53,13 @@ object TorqueDeployer extends App {
         jobSubmitter.copyFileToCluster(localCopyPath, remoteCopyPath)
       }
     }
+    val kryoRegistrations = {
+      if (config.hasPath("deployment.akka.kryo-registrations")) {
+        config.getList("deployment.akka.kryo-registrations").map(_.unwrapped.toString).toList
+      } else {
+        List.empty[String]
+      }
+    }
     val deploymentAlgorithm = config.getString("deployment.algorithm.class")
     val parameterMap = config.getConfig("deployment.algorithm.parameters").entrySet.map {
       entry => (entry.getKey, entry.getValue.unwrapped.toString)
@@ -62,10 +74,14 @@ object TorqueDeployer extends App {
       jvmParameters = deploymentJvmParameters,
       priority = priorityString,
       workingDir = jobWorkingDir)
-    def jobId = s"sc-${RandomString.generate(6)}"
-    torque.executeJobs(List(Job(
-      execute = TorqueNodeBootstrap(deploymentAlgorithm, parameterMap, jobNumberOfNodes, akkaPort).torqueExecutable,
-      jobId = jobId,
-      numberOfNodes = jobNumberOfNodes)))
+    val baseId = s"sc-${RandomString.generate(6)}-#"
+    val jobIds = (1 to jobRepetitions).map(i => baseId + i)
+    val jobs = jobIds.map { id =>
+      Job(
+        execute = TorqueNodeBootstrap(deploymentAlgorithm, parameterMap, jobNumberOfNodes, akkaPort, kryoRegistrations).torqueExecutable _,
+        jobId = id,
+        numberOfNodes = jobNumberOfNodes)
+    }
+    torque.executeJobs(jobs.toList)
   }
 }

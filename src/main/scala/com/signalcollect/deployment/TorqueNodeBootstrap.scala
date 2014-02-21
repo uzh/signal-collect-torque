@@ -40,13 +40,14 @@ case class TorqueNodeBootstrap(
   torqueDeployableAlgorithmClassName: String,
   parameters: Map[String, String],
   numberOfNodes: Int,
-  akkaPort: Int) {
+  akkaPort: Int,
+  kryoRegistrations: List[String]) {
 
-  def akkaConfig(akkaPort: Int) = AkkaConfig.get(
+  def akkaConfig(akkaPort: Int, kryoRegistrations: List[String]) = AkkaConfig.get(
     akkaMessageCompression = true,
     serializeMessages = false,
     loggingLevel = Logging.WarningLevel, //Logging.DebugLevel,
-    kryoRegistrations = List(),
+    kryoRegistrations = kryoRegistrations,
     useJavaSerialization = false,
     port = akkaPort)
 
@@ -56,11 +57,11 @@ case class TorqueNodeBootstrap(
     actorRef
   }
 
-  def torqueExecutable(): List[Map[String, String]] = {
+  def torqueExecutable {
     println(s"numberOfNodes = $numberOfNodes, akkaPort = $akkaPort")
     println(s"Starting the actor system and node actor ...")
     val nodeId = System.getenv("PBS_NODENUM").toInt
-    val system: ActorSystem = ActorSystem("SignalCollect", akkaConfig(akkaPort))
+    val system: ActorSystem = ActorSystem("SignalCollect", akkaConfig(akkaPort, kryoRegistrations))
     ActorSystemRegistry.register(system)
     val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, None)
     val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
@@ -78,6 +79,5 @@ case class TorqueNodeBootstrap(
       val algorithmObject = Class.forName(torqueDeployableAlgorithmClassName).newInstance.asInstanceOf[TorqueDeployableAlgorithm]
       algorithmObject.execute(parameters, nodeActors)
     }
-    List()
   }
 }
