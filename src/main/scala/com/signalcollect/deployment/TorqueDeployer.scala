@@ -31,7 +31,7 @@ object TorqueDeployer extends App {
   def deploy(config: Config) {
     val serverAddress = config.getString("deployment.torque.server.address")
     val serverUsername = config.getString("deployment.torque.server.username")
-    val jobRepetitions = if (config.hasPath("deployment.setup.copy-files")) {
+    val jobRepetitions = if (config.hasPath("deployment.torque.job.repetitions")) {
       config.getInt("deployment.torque.job.repetitions")
     } else {
       1
