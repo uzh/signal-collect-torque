@@ -57,30 +57,26 @@ case class TorqueHost(
       /** SUBMIT AN EVALUATION JOB FOR EACH CONFIGURATION */
       val jubSubmissions = jobs map {
         job =>
-          future {
-            println("Submitting job " + job.jobId + " ...")
-            val config = DefaultSerializer.write(job)
-            val folder = new File("." + fileSeparator + "config-tmp")
-            if (!folder.exists) {
-              folder.mkdir
-            }
-            val configPath = "." + fileSeparator + "config-tmp" + fileSeparator + job.jobId + ".config"
-            val out = new FileOutputStream(configPath)
-            out.write(config)
-            out.close
-            jobSubmitter.copyFileToCluster(configPath)
-            val deleteConfig = "rm " + configPath
-            deleteConfig !!
-            val result = jobSubmitter.runOnClusterNodes(job.jobId.toString, job.numberOfNodes, coresPerNode, jarName, mainClass, priority, jvmParameters, jdkBinPath, workingDir)
-            println("Job " + job.jobId + " has been submitted.")
-            result
+          println("Submitting job " + job.jobId + " ...")
+          val config = DefaultSerializer.write(job)
+          val folder = new File("." + fileSeparator + "config-tmp")
+          if (!folder.exists) {
+            folder.mkdir
           }
+          val configPath = "." + fileSeparator + "config-tmp" + fileSeparator + job.jobId + ".config"
+          val out = new FileOutputStream(configPath)
+          out.write(config)
+          out.close
+          jobSubmitter.copyFileToCluster(configPath)
+          val deleteConfig = "rm " + configPath
+          deleteConfig !!
+          val result = jobSubmitter.runOnClusterNodes(job.jobId.toString, job.numberOfNodes, coresPerNode, jarName, mainClass, priority, jvmParameters, jdkBinPath, workingDir)
+          println("Job " + job.jobId + " has been submitted.")
+          result
       }
-      jubSubmissions.foreach(Await.ready(_, Duration.Inf))
-      jubSubmissions.foreach(_.onSuccess({ case message => println(message) }))
-      jubSubmissions.map(_.onFailure({ case t: Throwable => println(t) }))
-      jubSubmissions.map(_.onFailure({ case e: Exception => e.printStackTrace }))
+      jubSubmissions.foreach(println(_))
     }
+    Thread.sleep(3000) // wait 3 seconds to give NFS time to update and make the copied file visible
     println("All jobs submitted.")
   }
 }

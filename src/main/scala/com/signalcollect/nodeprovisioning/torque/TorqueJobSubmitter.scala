@@ -21,12 +21,16 @@
 package com.signalcollect.nodeprovisioning.torque
 
 import java.io.File
-
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.future
 import scala.language.postfixOps
 import scala.sys.process.stringToProcess
-
 import ch.ethz.ssh2.Connection
 import ch.ethz.ssh2.StreamGobbler
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 case class TorqueJobSubmitter(
   username: String,
@@ -38,8 +42,38 @@ case class TorqueJobSubmitter(
   override def copyFileToCluster(localPath: String, targetPath: String = "") {
     val commandCopy = "scp -v " + localPath + " " + username + "@" + hostname + ":" + targetPath
     println(commandCopy)
-    println(commandCopy !!)
-    Thread.sleep(1000) // wait a second to give NFS time to update and make the copied file visible
+
+    //Kids, don't do this at home!
+    def attemptCopy = {
+      println(s"Copying $localPath ...")
+      val copyResult = future {
+        println(commandCopy !!)
+      }
+      try {
+        Await.ready(copyResult, Duration.create(20000, TimeUnit.MILLISECONDS))
+      } catch {
+        case t: Throwable => copyResult
+      }
+      copyResult
+    }
+
+    var successful = false
+    while (!successful) {
+      var result = attemptCopy
+      result.onComplete {
+        case x =>
+          if (x.isFailure) {
+            println(x)
+          }
+          successful = true
+      }
+      result.onFailure {
+        case x =>
+          println(s"Copy of $localPath did not finish in 20s, retrying...")
+      }
+      //Thread.sleep(1000) // wait a second to give NFS time to update and make the copied file visible
+    }
+
   }
 
   def executeCommandOnClusterManager(command: String): String = {
