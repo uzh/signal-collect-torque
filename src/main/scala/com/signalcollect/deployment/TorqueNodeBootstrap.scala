@@ -48,7 +48,6 @@ case class TorqueNodeBootstrap(
     serializeMessages = false,
     loggingLevel = Logging.WarningLevel, //Logging.DebugLevel,
     kryoRegistrations = kryoRegistrations,
-    useJavaSerialization = false,
     port = akkaPort)
 
   def ipAndIdToActorRef(ip: String, id: Int, system: ActorSystem, akkaPort: Int): ActorRef = {
