@@ -20,14 +20,20 @@
 package com.signalcollect.deployment
 
 import java.net.InetAddress
-import com.signalcollect.configuration.AkkaConfig
-import com.signalcollect.nodeprovisioning.NodeActorCreator
+
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
+
 import com.signalcollect.configuration.ActorSystemRegistry
-import akka.actor.ActorSystem
+import com.signalcollect.configuration.AkkaConfig
+import com.signalcollect.nodeprovisioning.DefaultNodeActor
+
 import akka.actor.ActorRef
+import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.event.Logging
-import com.signalcollect.nodeprovisioning.DefaultNodeActor
+import akka.util.Timeout
 
 /**
  * A class that gets serialized and contains the code required to bootstrap
@@ -47,7 +53,6 @@ case class TorqueNodeBootstrap(
   def akkaConfig(akkaPort: Int,
     kryoRegistrations: List[String],
     kryoInitializer: String) = AkkaConfig.get(
-    akkaMessageCompression = true,
     serializeMessages = false,
     loggingLevel = Logging.WarningLevel, //Logging.DebugLevel,
     kryoRegistrations = kryoRegistrations,
@@ -55,8 +60,10 @@ case class TorqueNodeBootstrap(
     port = akkaPort)
 
   def ipAndIdToActorRef(ip: String, id: Int, system: ActorSystem, akkaPort: Int): ActorRef = {
-    val address = s"""akka://SignalCollect@$ip:$akkaPort/user/DefaultNodeActor$id"""
-    val actorRef = system.actorFor(address)
+    val address = s"""akka.tcp://SignalCollect@$ip:$akkaPort/user/DefaultNodeActor$id"""
+    implicit val timeout = Timeout(30 seconds)
+    val selection = system.actorSelection(address)
+    val actorRef = Await.result(selection.resolveOne, 30 seconds)
     actorRef
   }
 
@@ -67,9 +74,7 @@ case class TorqueNodeBootstrap(
     val system: ActorSystem = ActorSystem("SignalCollect",
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
-    val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, None)
-    val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
-      nodeControllerCreator.create), name = "DefaultNodeActor" + nodeId.toString)
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
     val nodesFilePath = System.getenv("PBS_NODEFILE")
     val isLeader = nodesFilePath != null
     if (isLeader) {

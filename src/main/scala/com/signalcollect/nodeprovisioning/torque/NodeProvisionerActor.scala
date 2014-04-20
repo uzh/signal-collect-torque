@@ -28,7 +28,6 @@ import akka.actor.ActorLogging
 import com.signalcollect.interfaces.ActorRestartLogging
 import akka.actor.ActorSystem
 import com.signalcollect.configuration.ActorSystemRegistry
-import com.signalcollect.nodeprovisioning.NodeActorCreator
 import akka.actor.Props
 import com.signalcollect.nodeprovisioning.DefaultNodeActor
 import com.signalcollect.nodeprovisioning.AkkaHelper
@@ -46,9 +45,7 @@ class NodeProvisionerActor(
     val system = ActorSystemRegistry.retrieve("SignalCollect").
       getOrElse(throw new Exception("No actor system with name \"SignalCollect\" found!"))
     val nodeProvisionerAddress = AkkaHelper.getRemoteAddress(self, system)
-    val nodeControllerCreator = NodeActorCreator(0, numberOfNodes, Some(nodeProvisionerAddress))
-    val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
-      nodeControllerCreator.create), name = "DefaultNodeActorOnCoordinatior")
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], 0, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActorOnCoordinatior")
   }
 
   var nodeArrayRequestor: Option[ActorRef] = None
