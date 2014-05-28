@@ -53,7 +53,7 @@ case class TorqueNodeBootstrap(
     port = akkaPort)
 
   def ipAndIdToActorRef(ip: String, id: Int, system: ActorSystem, akkaPort: Int): ActorRef = {
-    val address = s"""akka://SignalCollect@$ip:$akkaPort/user/DefaultNodeActor$id"""
+    val address = s"""akka.tcp://SignalCollect@$ip:$akkaPort/user/DefaultNodeActor$id"""
     val actorRef = system.actorFor(address)
     actorRef
   }
@@ -66,7 +66,7 @@ case class TorqueNodeBootstrap(
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
     val nodeController = system.actorOf(
-      Props(classOf[DefaultNodeActor], "", nodeId, numberOfNodes, None), name = "NodeActor#" + nodeId)
+      Props(classOf[DefaultNodeActor], "", nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId)
     val nodesFilePath = System.getenv("PBS_NODEFILE")
     val isLeader = nodesFilePath != null
     if (isLeader) {
