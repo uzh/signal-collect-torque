@@ -21,7 +21,6 @@ package com.signalcollect.deployment
 
 import java.net.InetAddress
 import com.signalcollect.configuration.AkkaConfig
-import com.signalcollect.nodeprovisioning.NodeActorCreator
 import com.signalcollect.configuration.ActorSystemRegistry
 import akka.actor.ActorSystem
 import akka.actor.ActorRef
@@ -47,7 +46,6 @@ case class TorqueNodeBootstrap(
   def akkaConfig(akkaPort: Int,
     kryoRegistrations: List[String],
     kryoInitializer: String) = AkkaConfig.get(
-    akkaMessageCompression = true,
     serializeMessages = false,
     loggingLevel = Logging.WarningLevel, //Logging.DebugLevel,
     kryoRegistrations = kryoRegistrations,
@@ -67,9 +65,8 @@ case class TorqueNodeBootstrap(
     val system: ActorSystem = ActorSystem("SignalCollect",
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
-    val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, None)
-    val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
-      nodeControllerCreator.create), name = "DefaultNodeActor" + nodeId.toString)
+    val nodeController = system.actorOf(
+      Props(classOf[DefaultNodeActor], "", nodeId, numberOfNodes, None), name = "NodeActor#" + nodeId)
     val nodesFilePath = System.getenv("PBS_NODEFILE")
     val isLeader = nodesFilePath != null
     if (isLeader) {
