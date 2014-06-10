@@ -25,8 +25,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import com.signalcollect.configuration.ActorSystemRegistry
 import com.signalcollect.messaging.AkkaProxy
-import com.signalcollect.nodeprovisioning.AkkaHelper
-import com.signalcollect.nodeprovisioning.Node
 import com.signalcollect.nodeprovisioning.NodeProvisioner
 import com.typesafe.config.Config
 import akka.actor.ActorRef
@@ -35,13 +33,14 @@ import akka.actor.Props
 import akka.japi.Creator
 import akka.pattern.ask
 import akka.util.Timeout
-import com.signalcollect.nodeprovisioning.DefaultNodeActor
 import com.signalcollect.interfaces.NodeActor
 import scala.reflect.ClassTag
 import com.signalcollect.interfaces.MessageBusFactory
-import com.signalcollect.nodeprovisioning.NodeActorCreator
 import com.signalcollect.interfaces.GetNodes
 import com.signalcollect.util.RandomString
+import com.signalcollect.util.AkkaRemoteAddress
+import com.signalcollect.node.NodeActorCreator
+import com.signalcollect.node.DefaultNodeActor
 
 /**
  * Creator in separate class to prevent excessive closure-capture of the TorqueNodeProvisioner class (Error[java.io.NotSerializableException TorqueNodeProvisioner])
@@ -65,7 +64,7 @@ class TorqueNodeProvisioner(
     val nodeProvisioner = system.actorOf(
       Props[NodeProvisionerActor].withCreator(
         nodeProvisionerCreator.create), name = "NodeProvisioner")
-    val nodeProvisionerAddress = AkkaHelper.getRemoteAddress(nodeProvisioner, system)
+    val nodeProvisionerAddress = AkkaRemoteAddress.get(nodeProvisioner, system)
     var jobs = List[Job]()
     implicit val timeout = new Timeout(Duration.create(1800, TimeUnit.SECONDS))
     val baseNodeId = {

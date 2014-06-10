@@ -21,13 +21,13 @@ package com.signalcollect.deployment
 
 import java.net.InetAddress
 import com.signalcollect.configuration.AkkaConfig
-import com.signalcollect.nodeprovisioning.NodeActorCreator
 import com.signalcollect.configuration.ActorSystemRegistry
 import akka.actor.ActorSystem
 import akka.actor.ActorRef
 import akka.actor.Props
 import akka.event.Logging
-import com.signalcollect.nodeprovisioning.DefaultNodeActor
+import com.signalcollect.interfaces.NodeActor
+import com.signalcollect.node.NodeActorCreator
 
 /**
  * A class that gets serialized and contains the code required to bootstrap
@@ -68,7 +68,7 @@ case class TorqueNodeBootstrap(
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
     val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, None)
-    val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
+    val nodeController = system.actorOf(Props[NodeActor].withCreator(
       nodeControllerCreator.create), name = "DefaultNodeActor" + nodeId.toString)
     val nodesFilePath = System.getenv("PBS_NODEFILE")
     val isLeader = nodesFilePath != null

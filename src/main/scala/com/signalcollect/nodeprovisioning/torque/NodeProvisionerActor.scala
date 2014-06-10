@@ -20,20 +20,21 @@
 
 package com.signalcollect.nodeprovisioning.torque
 
-import akka.actor.Actor
-import akka.actor.ActorRef
-import akka.actor.PoisonPill
-import akka.actor.actorRef2Scala
-import akka.actor.ActorLogging
-import com.signalcollect.interfaces.ActorRestartLogging
-import akka.actor.ActorSystem
 import com.signalcollect.configuration.ActorSystemRegistry
-import com.signalcollect.nodeprovisioning.NodeActorCreator
-import akka.actor.Props
-import com.signalcollect.nodeprovisioning.DefaultNodeActor
-import com.signalcollect.nodeprovisioning.AkkaHelper
+import com.signalcollect.interfaces.ActorRestartLogging
 import com.signalcollect.interfaces.GetNodes
 import com.signalcollect.interfaces.NodeReady
+import com.signalcollect.node.DefaultNodeActor
+import com.signalcollect.node.NodeActorCreator
+import com.signalcollect.util.AkkaRemoteAddress
+
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.ActorSystem
+import akka.actor.PoisonPill
+import akka.actor.Props
+import akka.actor.actorRef2Scala
 
 class NodeProvisionerActor(
   numberOfNodes: Int,
@@ -45,7 +46,7 @@ class NodeProvisionerActor(
   if (allocateWorkersOnCoordinatorNode) {
     val system = ActorSystemRegistry.retrieve("SignalCollect").
       getOrElse(throw new Exception("No actor system with name \"SignalCollect\" found!"))
-    val nodeProvisionerAddress = AkkaHelper.getRemoteAddress(self, system)
+    val nodeProvisionerAddress = AkkaRemoteAddress.get(self, system)
     val nodeControllerCreator = NodeActorCreator(0, numberOfNodes, Some(nodeProvisionerAddress))
     val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
       nodeControllerCreator.create), name = "DefaultNodeActorOnCoordinatior")
