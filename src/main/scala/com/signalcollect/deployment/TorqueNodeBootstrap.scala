@@ -52,7 +52,7 @@ case class TorqueNodeBootstrap(
     kryoRegistrations: List[String],
     kryoInitializer: String) = AkkaConfig.get(
     serializeMessages = false,
-    loggingLevel = Logging.DebugLevel, //Logging.DebugLevel,
+    loggingLevel = Logging.InfoLevel , //Logging.DebugLevel,
     kryoRegistrations = kryoRegistrations,
     kryoInitializer = kryoInitializer,
     port = akkaPort)
