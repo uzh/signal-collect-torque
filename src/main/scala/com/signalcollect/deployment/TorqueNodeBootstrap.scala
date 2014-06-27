@@ -20,20 +20,17 @@
 package com.signalcollect.deployment
 
 import java.net.InetAddress
-
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
-
 import com.signalcollect.configuration.ActorSystemRegistry
 import com.signalcollect.configuration.AkkaConfig
-import com.signalcollect.nodeprovisioning.DefaultNodeActor
-
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.event.Logging
 import akka.util.Timeout
+import com.signalcollect.node.DefaultNodeActor
 
 /**
  * A class that gets serialized and contains the code required to bootstrap
@@ -43,6 +40,7 @@ import akka.util.Timeout
  * defined by the class 'torqueDeployableAlgorithmClassName'.
  */
 case class TorqueNodeBootstrap(
+  actorNamePrefix: String,
   torqueDeployableAlgorithmClassName: String,
   parameters: Map[String, String],
   numberOfNodes: Int,
@@ -54,7 +52,7 @@ case class TorqueNodeBootstrap(
     kryoRegistrations: List[String],
     kryoInitializer: String) = AkkaConfig.get(
     serializeMessages = false,
-    loggingLevel = Logging.WarningLevel, //Logging.DebugLevel,
+    loggingLevel = Logging.DebugLevel, //Logging.DebugLevel,
     kryoRegistrations = kryoRegistrations,
     kryoInitializer = kryoInitializer,
     port = akkaPort)
@@ -74,7 +72,7 @@ case class TorqueNodeBootstrap(
     val system: ActorSystem = ActorSystem("SignalCollect",
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
-    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], actorNamePrefix, nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
     val nodesFilePath = System.getenv("PBS_NODEFILE")
     val isLeader = nodesFilePath != null
     if (isLeader) {

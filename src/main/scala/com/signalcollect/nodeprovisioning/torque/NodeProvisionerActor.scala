@@ -29,10 +29,10 @@ import com.signalcollect.interfaces.ActorRestartLogging
 import akka.actor.ActorSystem
 import com.signalcollect.configuration.ActorSystemRegistry
 import akka.actor.Props
-import com.signalcollect.nodeprovisioning.DefaultNodeActor
-import com.signalcollect.nodeprovisioning.AkkaHelper
 import com.signalcollect.interfaces.GetNodes
 import com.signalcollect.interfaces.NodeReady
+import com.signalcollect.node.DefaultNodeActor
+import com.signalcollect.util.AkkaRemoteAddress
 
 class NodeProvisionerActor(
   numberOfNodes: Int,
@@ -44,7 +44,7 @@ class NodeProvisionerActor(
   if (allocateWorkersOnCoordinatorNode) {
     val system = ActorSystemRegistry.retrieve("SignalCollect").
       getOrElse(throw new Exception("No actor system with name \"SignalCollect\" found!"))
-    val nodeProvisionerAddress = AkkaHelper.getRemoteAddress(self, system)
+    val nodeProvisionerAddress = AkkaRemoteAddress.get(self, system)
     val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], 0, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActorOnCoordinatior")
   }
 
