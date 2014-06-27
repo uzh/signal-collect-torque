@@ -61,6 +61,13 @@ case class TorqueNodeBootstrap(
   }
 
   def torqueExecutable {
+    val nodesFilePath = System.getenv("PBS_NODEFILE")
+    val isLeader = nodesFilePath != null
+    if (isLeader) {
+      println("Leader is giving other nodes some time to start ...")
+      Thread.sleep(1000)
+    }
+    val leaderExecutionStartingTime = System.currentTimeMillis // Actual start of S/C execution.
     println(s"numberOfNodes = $numberOfNodes, akkaPort = $akkaPort")
     println(s"Starting the actor system and node actor ...")
     val nodeId = System.getenv("PBS_NODENUM").toInt
@@ -70,18 +77,15 @@ case class TorqueNodeBootstrap(
     val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, None)
     val nodeController = system.actorOf(Props[NodeActor].withCreator(
       nodeControllerCreator.create), name = "DefaultNodeActor" + nodeId.toString)
-    val nodesFilePath = System.getenv("PBS_NODEFILE")
-    val isLeader = nodesFilePath != null
     if (isLeader) {
-      println("Leader is waiting for node actors to start ...")
-      Thread.sleep(500)
       println("Leader is generating the node actor references ...")
       val nodeNames = io.Source.fromFile(nodesFilePath).getLines.toList.distinct
       val nodeIps = nodeNames.map(InetAddress.getByName(_).getHostAddress)
       val nodeActors = nodeIps.zipWithIndex.map { case (ip, i) => ipAndIdToActorRef(ip, i, system, akkaPort) }.toArray
       println("Leader is passing the nodes and graph builder on to the user code ...")
       val algorithmObject = Class.forName(torqueDeployableAlgorithmClassName).newInstance.asInstanceOf[TorqueDeployableAlgorithm]
-      algorithmObject.execute(parameters, nodeActors)
+      val extendedParameters = parameters + ("leaderExecutionStartingTime" -> leaderExecutionStartingTime.toString)
+      algorithmObject.execute(extendedParameters, nodeActors)
     }
   }
 }
