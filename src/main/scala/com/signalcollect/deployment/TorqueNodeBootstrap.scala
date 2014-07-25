@@ -39,7 +39,7 @@ import com.signalcollect.node.DefaultNodeActor
  * and the leader additionally bootstraps a Signal/Collect computation
  * defined by the class 'torqueDeployableAlgorithmClassName'.
  */
-case class TorqueNodeBootstrap(
+case class TorqueNodeBootstrap[Id, Signal](
   actorNamePrefix: String,
   torqueDeployableAlgorithmClassName: String,
   parameters: Map[String, String],
@@ -72,7 +72,7 @@ case class TorqueNodeBootstrap(
     val system: ActorSystem = ActorSystem("SignalCollect",
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
-    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], actorNamePrefix, nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], actorNamePrefix, nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
     val nodesFilePath = System.getenv("PBS_NODEFILE")
     val isLeader = nodesFilePath != null
     if (isLeader) {

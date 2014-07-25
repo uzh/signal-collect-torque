@@ -41,13 +41,13 @@ import com.signalcollect.util.RandomString
 import com.signalcollect.node.DefaultNodeActor
 import com.signalcollect.util.AkkaRemoteAddress
 
-class TorqueNodeProvisioner(
+class TorqueNodeProvisioner[Id, Signal](
   torqueHost: TorqueHost,
   numberOfNodes: Int,
   allocateWorkersOnCoordinatorNode: Boolean,
-  copyExecutable: Boolean) extends NodeProvisioner {
+  copyExecutable: Boolean) extends NodeProvisioner[Id, Signal] {
   def getNodes(localSystem: ActorSystem, actorNamePrefix: String, akkaConfig: Config): Array[ActorRef] = {
-    val nodeProvisioner = localSystem.actorOf(Props(classOf[NodeProvisionerActor], numberOfNodes, allocateWorkersOnCoordinatorNode), name = "NodeProvisioner")
+    val nodeProvisioner = localSystem.actorOf(Props(classOf[NodeProvisionerActor[Id, Signal]], numberOfNodes, allocateWorkersOnCoordinatorNode), name = "NodeProvisioner")
     val nodeProvisionerAddress = AkkaRemoteAddress.get(nodeProvisioner, localSystem)
     var jobs = List[Job]()
     implicit val timeout = new Timeout(Duration.create(1800, TimeUnit.SECONDS))
@@ -62,7 +62,7 @@ class TorqueNodeProvisioner(
       val function: () => Unit = {
         () =>
           val system = ActorSystem("SignalCollect", akkaConfig)
-          val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], actorNamePrefix, nodeId, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActor" + nodeId.toString)
+          val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], actorNamePrefix, nodeId, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActor" + nodeId.toString)
       }
       val jobId = s"node-$nodeId-${RandomString.generate(6)}"
       jobs = new Job(jobId = jobId, execute = function) :: jobs

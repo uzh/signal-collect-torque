@@ -34,7 +34,7 @@ import com.signalcollect.interfaces.NodeReady
 import com.signalcollect.node.DefaultNodeActor
 import com.signalcollect.util.AkkaRemoteAddress
 
-class NodeProvisionerActor(
+class NodeProvisionerActor[Id, Signal](
   numberOfNodes: Int,
   allocateWorkersOnCoordinatorNode: Boolean)
   extends Actor
@@ -45,7 +45,7 @@ class NodeProvisionerActor(
     val system = ActorSystemRegistry.retrieve("SignalCollect").
       getOrElse(throw new Exception("No actor system with name \"SignalCollect\" found!"))
     val nodeProvisionerAddress = AkkaRemoteAddress.get(self, system)
-    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor], 0, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActorOnCoordinatior")
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], 0, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActorOnCoordinatior")
   }
 
   var nodeArrayRequestor: Option[ActorRef] = None
