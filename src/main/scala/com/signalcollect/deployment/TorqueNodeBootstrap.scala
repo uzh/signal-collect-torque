@@ -21,13 +21,18 @@ package com.signalcollect.deployment
 
 import java.net.InetAddress
 import com.signalcollect.configuration.AkkaConfig
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import com.signalcollect.configuration.ActorSystemRegistry
-import akka.actor.ActorSystem
+import com.signalcollect.configuration.AkkaConfig
 import akka.actor.ActorRef
+import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.event.Logging
 import com.signalcollect.interfaces.NodeActor
-import com.signalcollect.node.NodeActorCreator
+import akka.util.Timeout
+import com.signalcollect.node.DefaultNodeActor
 
 /**
  * A class that gets serialized and contains the code required to bootstrap
@@ -36,7 +41,8 @@ import com.signalcollect.node.NodeActorCreator
  * and the leader additionally bootstraps a Signal/Collect computation
  * defined by the class 'torqueDeployableAlgorithmClassName'.
  */
-case class TorqueNodeBootstrap(
+case class TorqueNodeBootstrap[Id, Signal](
+  actorNamePrefix: String,
   torqueDeployableAlgorithmClassName: String,
   parameters: Map[String, String],
   numberOfNodes: Int,
@@ -47,16 +53,17 @@ case class TorqueNodeBootstrap(
   def akkaConfig(akkaPort: Int,
     kryoRegistrations: List[String],
     kryoInitializer: String) = AkkaConfig.get(
-    akkaMessageCompression = true,
     serializeMessages = false,
-    loggingLevel = Logging.WarningLevel, //Logging.DebugLevel,
+    loggingLevel = Logging.InfoLevel , //Logging.DebugLevel,
     kryoRegistrations = kryoRegistrations,
     kryoInitializer = kryoInitializer,
     port = akkaPort)
 
   def ipAndIdToActorRef(ip: String, id: Int, system: ActorSystem, akkaPort: Int): ActorRef = {
-    val address = s"""akka://SignalCollect@$ip:$akkaPort/user/DefaultNodeActor$id"""
-    val actorRef = system.actorFor(address)
+    val address = s"""akka.tcp://SignalCollect@$ip:$akkaPort/user/DefaultNodeActor$id"""
+    implicit val timeout = Timeout(30 seconds)
+    val selection = system.actorSelection(address)
+    val actorRef = Await.result(selection.resolveOne, 30 seconds)
     actorRef
   }
 
@@ -74,9 +81,7 @@ case class TorqueNodeBootstrap(
     val system: ActorSystem = ActorSystem("SignalCollect",
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
-    val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, None)
-    val nodeController = system.actorOf(Props[NodeActor].withCreator(
-      nodeControllerCreator.create), name = "DefaultNodeActor" + nodeId.toString)
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], actorNamePrefix, nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
     if (isLeader) {
       println("Leader is generating the node actor references ...")
       val nodeNames = io.Source.fromFile(nodesFilePath).getLines.toList.distinct

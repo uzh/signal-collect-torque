@@ -84,7 +84,7 @@ object TorqueDeployer extends App {
     val jobs = jobIds.map { id =>
       Job(
         execute = TorqueNodeBootstrap(
-          deploymentAlgorithm, parameterMap, jobNumberOfNodes, akkaPort, kryoRegistrations, kryoInitializer).torqueExecutable _,
+          "", deploymentAlgorithm, parameterMap, jobNumberOfNodes, akkaPort, kryoRegistrations, kryoInitializer).torqueExecutable _,
         jobId = id,
         numberOfNodes = jobNumberOfNodes)
     }

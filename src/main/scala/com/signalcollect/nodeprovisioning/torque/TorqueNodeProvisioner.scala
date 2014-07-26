@@ -38,33 +38,17 @@ import scala.reflect.ClassTag
 import com.signalcollect.interfaces.MessageBusFactory
 import com.signalcollect.interfaces.GetNodes
 import com.signalcollect.util.RandomString
-import com.signalcollect.util.AkkaRemoteAddress
-import com.signalcollect.node.NodeActorCreator
 import com.signalcollect.node.DefaultNodeActor
+import com.signalcollect.util.AkkaRemoteAddress
 
-/**
- * Creator in separate class to prevent excessive closure-capture of the TorqueNodeProvisioner class (Error[java.io.NotSerializableException TorqueNodeProvisioner])
- */
-case class NodeProvisionerCreator(
-  numberOfNodes: Int,
-  allocateWorkersOnCoordinatorNode: Boolean) extends Creator[NodeProvisionerActor] {
-  def create: NodeProvisionerActor = {
-    new NodeProvisionerActor(numberOfNodes, allocateWorkersOnCoordinatorNode)
-  }
-}
-
-class TorqueNodeProvisioner(
+class TorqueNodeProvisioner[Id, Signal](
   torqueHost: TorqueHost,
   numberOfNodes: Int,
   allocateWorkersOnCoordinatorNode: Boolean,
-  copyExecutable: Boolean) extends NodeProvisioner {
-  def getNodes(akkaConfig: Config): Array[ActorRef] = {
-    val system: ActorSystem = ActorSystemRegistry.retrieve("SignalCollect").get
-    val nodeProvisionerCreator = NodeProvisionerCreator(numberOfNodes, allocateWorkersOnCoordinatorNode)
-    val nodeProvisioner = system.actorOf(
-      Props[NodeProvisionerActor].withCreator(
-        nodeProvisionerCreator.create), name = "NodeProvisioner")
-    val nodeProvisionerAddress = AkkaRemoteAddress.get(nodeProvisioner, system)
+  copyExecutable: Boolean) extends NodeProvisioner[Id, Signal] {
+  def getNodes(localSystem: ActorSystem, actorNamePrefix: String, akkaConfig: Config): Array[ActorRef] = {
+    val nodeProvisioner = localSystem.actorOf(Props(classOf[NodeProvisionerActor[Id, Signal]], numberOfNodes, allocateWorkersOnCoordinatorNode), name = "NodeProvisioner")
+    val nodeProvisionerAddress = AkkaRemoteAddress.get(nodeProvisioner, localSystem)
     var jobs = List[Job]()
     implicit val timeout = new Timeout(Duration.create(1800, TimeUnit.SECONDS))
     val baseNodeId = {
@@ -78,9 +62,7 @@ class TorqueNodeProvisioner(
       val function: () => Unit = {
         () =>
           val system = ActorSystem("SignalCollect", akkaConfig)
-          val nodeControllerCreator = NodeActorCreator(nodeId, numberOfNodes, Some(nodeProvisionerAddress))
-          val nodeController = system.actorOf(Props[DefaultNodeActor].withCreator(
-            nodeControllerCreator.create), name = "DefaultNodeActor" + nodeId.toString)
+          val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], actorNamePrefix, nodeId, numberOfNodes, Some(nodeProvisionerAddress)), name = "DefaultNodeActor" + nodeId.toString)
       }
       val jobId = s"node-$nodeId-${RandomString.generate(6)}"
       jobs = new Job(jobId = jobId, execute = function) :: jobs
