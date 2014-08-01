@@ -30,6 +30,7 @@ import scala.language.postfixOps
 import scala.sys.process.stringToProcess
 import com.signalcollect.serialization.DefaultSerializer
 import scala.util.Random
+import scala.concurrent.Future
 
 case class TorqueHost(
   jobSubmitter: AbstractJobSubmitter,
@@ -57,7 +58,7 @@ case class TorqueHost(
       /** SUBMIT AN EVALUATION JOB FOR EACH CONFIGURATION */
       val jubSubmissions = jobs map {
         job =>
-          future {
+          Future {
             println("Submitting job " + job.jobId + " ...")
             val config = DefaultSerializer.write(job)
             val folder = new File("." + fileSeparator + "config-tmp")
