@@ -81,7 +81,7 @@ case class TorqueNodeBootstrap[Id, Signal](
     val system: ActorSystem = ActorSystem("SignalCollect",
       akkaConfig(akkaPort, kryoRegistrations, kryoInitializer))
     ActorSystemRegistry.register(system)
-    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], actorNamePrefix, nodeId, numberOfNodes, None), name = "DefaultNodeActor" + nodeId.toString)
+    val nodeController = system.actorOf(Props(classOf[DefaultNodeActor[Id, Signal]], actorNamePrefix, nodeId, numberOfNodes, None, None), name = "DefaultNodeActor" + nodeId.toString)
     if (isLeader) {
       println("Leader is generating the node actor references ...")
       val nodeNames = io.Source.fromFile(nodesFilePath).getLines.toList.distinct
